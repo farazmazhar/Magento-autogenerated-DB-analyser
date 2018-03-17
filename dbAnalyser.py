@@ -36,23 +36,42 @@ class mysqlDBanalyser:
     def closeConnection(self):
         self.connection.close()
         
-    def getTableRows(self, table_name):
+    def getTableRows(self, table_name, columns = "*"):
         with self.connection.cursor() as cursor:
-            sql = 'SELECT * FROM ' + table_name
-            cursor.execute(sql)
+            query = 'SELECT * FROM ' + table_name
+            cursor.execute(query)
             result = cursor.fetchall()
             return result
+        
+    def getTableNames(self, columns = "*"):
+        with self.connection.cursor() as cursor:
+            query = "SELECT " + columns + " FROM information_schema.tables WHERE TABLE_SCHEMA = '" + self.db_name +"'"
+            cursor.execute(query)
+            result = cursor.fetchall()
+            return result
+        
+    def getNonEmptyTables(self, columns = "*"):
+        with self.connection.cursor() as cursor:
+            query = "SELECT " + columns + " FROM information_schema.tables WHERE TABLE_SCHEMA = '" + self.db_name +"' AND NOT TABLE_ROWS = 0"
+            cursor.execute(query)
+            result = cursor.fetchall()
+            return result
+        
+    def getColumnNames(self, columns = "*"):
+        with self.connection.cursor() as cursor:
+            query = "SELECT " + columns + " FROM information_schema.columns WHERE TABLE_SCHEMA = '" + self.db_name +"'"
+            cursor.execute(query)
+            result = cursor.fetchall()
+            return result
+    
+    def generateCommonColumnTableDict(self):
+        cctDict = {}
+        
+        for item in self.getColumnNames():
+            try:
+                cctDict[item['COLUMN_NAME']].append(item['TABLE_NAME'])
+            except:
+                cctDict[item['COLUMN_NAME']] = [item['TABLE_NAME']]
+                
+        return cctDict
             
-def main():
-    obj = mysqlDBanalyser()
-    obj.establishConnection()
-    df = pd.DataFrame(data = obj.getTableRows('admin_role'))
-#    with open("tableRows.csv", "w") as file:
-#        file.write(df.to_csv())
-    
-    print(df)
-    obj.closeConnection()
-    
-if __name__ == "__main__":
-    main()
-    
